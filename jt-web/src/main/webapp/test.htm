@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+ <head>
+ </head>
+ <body>
+	<script type="text/javascript" src="http://manage.jt.com/js/jquery-easyui-1.4.1/jquery.min.js"></script>
+	<script type="text/javascript">
+		$(function(){
+			$.get("http://manage.jt.com/test.json",function(data){
+				alert(data.key);
+			});
+		});
+	</script>
+
+ </body>
+</html>

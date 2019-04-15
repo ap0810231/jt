@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.jt.order.mapper.OrderMapper">
+	<!-- 构建订单对象关联结构，一个订单下有多个商品，对多， 
+			autoMapping="true"它来自动映射，
+			select=""对应此子结果集SQL语句标签id名 ,效率低，一条就会发出一条SQL语句。n个SQL语句。结构清晰方便读程，维护方便。
+			column=""外键值
+	-->
+	<resultMap type="Order" id="orderRM" autoMapping="true">
+		<id property="orderId" column="order_id"/>
+		<!-- 对一 -->
+		<association property="orderShipping" javaType="OrderShipping" column="order_id" select="queryOrderShippingByOrderId"></association>
+		<!-- 对多 -->
+		<collection property="orderItems" javaType="Arraylist" ofType="OrderItem" column="order_id" select="queryOrderItemByOrderId"></collection>
+	</resultMap>
+
+	<select id="queryOrderItemByOrderId" resultType="OrderItem" parameterType="String">
+		SELECT * FROM tb_order_item WHERE order_id = #{orderId};
+	</select>
+	
+	<select id="queryOrderShippingByOrderId" resultType="OrderShipping" parameterType="String">
+		SELECT * FROM tb_order_shipping WHERE order_id = #{orderId};
+	</select>
+
+	<!-- 1.新增，mysql支持批量新增 -->
+	<insert id="orderCreate"> 
+		INSERT INTO tb_order VALUES (#{orderId},#{payment},#{paymentType},#{postFee},#{status},#{created},#{updated},#{paymentTime},#{consignTime},#{endTime},#{closeTime},#{shippingName},#{shippingCode},#{userId},#{buyerMessage},#{buyerNick},#{buyerRate});
+		INSERT INTO tb_order_item VALUES 
+		<foreach collection="orderItems" item="item" separator=",">
+			(#{item.itemId},#{orderId},#{item.num},#{item.title},#{item.price},#{item.totalFee},#{item.picPath})
+		</foreach>
+		;
+		INSERT INTO tb_order_shipping VALUES (#{orderId},#{orderShipping.receiverName},#{orderShipping.receiverPhone},#{orderShipping.receiverMobile},#{orderShipping.receiverState},#{orderShipping.receiverCity},#{orderShipping.receiverDistrict},#{orderShipping.receiverAddress},#{orderShipping.receiverZip},NOW(),NOW());
+	</insert>
+	
+	<!-- 2.查询某个订单 -->
+	<select id="queryOrderByOrderId" resultMap="orderRM">
+		SELECT * FROM tb_order WHERE order_id = #{id};
+	</select>
+		
+	<!-- 3.定时任务，更新未支付订单的状态 -->
+	<update id="paymentOrderScan" parameterType="Date">
+		UPDATE tb_order SET
+			status = 6,
+			update_time = NOW(),
+			close_time = NOW(),
+			end_time = NOW()
+		WHERE status = 1 AND payment_type = 1 AND create_time &lt;= #{date}
+	</update>
+
+</mapper>
+
